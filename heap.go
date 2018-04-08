@@ -6,10 +6,10 @@ import (
 )
 
 type mockTimer struct {
-	deadline    time.Time
-	timeoutFunc func() time.Duration
-	mock        *Mock
-	heapIndex   int
+	deadline  time.Time
+	fire      func() time.Duration
+	mock      *Mock
+	heapIndex int
 }
 
 const removed = -1
@@ -18,7 +18,7 @@ func (t mockTimer) stopped() bool {
 	return t.heapIndex == removed
 }
 
-// timerHeap implements mockTimers with a heap
+// timerHeap implements mockTimers with a heap.
 type timerHeap []*mockTimer
 
 func (h timerHeap) Len() int { return len(h) }

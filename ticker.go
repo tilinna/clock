@@ -5,12 +5,15 @@ import (
 	"time"
 )
 
+// Ticker represents a time.Ticker.
 type Ticker struct {
 	C      <-chan time.Time
 	ticker *time.Ticker
 	*mockTimer
 }
 
+// NewTicker returns a new Ticker containing a channel that will send the
+// current time with a period specified by the duration d.
 func (m *Mock) NewTicker(d time.Duration) *Ticker {
 	m.Lock()
 	defer m.Unlock()
@@ -20,6 +23,8 @@ func (m *Mock) NewTicker(d time.Duration) *Ticker {
 	return m.newTicker(d)
 }
 
+// Tick is a convenience wrapper for NewTicker providing access to the ticking
+// channel only.
 func (m *Mock) Tick(d time.Duration) <-chan time.Time {
 	m.Lock()
 	defer m.Unlock()
@@ -38,7 +43,7 @@ func (m *Mock) newTicker(d time.Duration) *Ticker {
 			mock:     m,
 		},
 	}
-	t.timeoutFunc = func() time.Duration {
+	t.fire = func() time.Duration {
 		select {
 		case c <- m.now:
 		default:
@@ -49,6 +54,7 @@ func (m *Mock) newTicker(d time.Duration) *Ticker {
 	return t
 }
 
+// Stop turns off a ticker. After Stop, no more ticks will be sent.
 func (t *Ticker) Stop() {
 	if t.ticker != nil {
 		t.ticker.Stop()

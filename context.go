@@ -5,16 +5,25 @@ import (
 	"time"
 )
 
+// DeadlineContext returns a copy of the parent context with the mocked
+// deadline adjusted to be no later than d.
+//
+// Unlike timectx.WithClock, this doesn't associate the Mock instance
+// with the returned context.
 func (m *Mock) DeadlineContext(parent context.Context, d time.Time) (context.Context, context.CancelFunc) {
 	m.Lock()
 	defer m.Unlock()
 	return m.deadlineContext(parent, d)
 }
 
-func (m *Mock) TimeoutContext(parent context.Context, d time.Duration) (context.Context, context.CancelFunc) {
+// TimeoutContext returns DeadlineContext(parent, m.Now().Add(timeout)).
+//
+// Unlike timectx.WithClock, this doesn't associate the Mock instance
+// with the returned context.
+func (m *Mock) TimeoutContext(parent context.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
 	m.Lock()
 	defer m.Unlock()
-	return m.deadlineContext(parent, m.now.Add(d))
+	return m.deadlineContext(parent, m.now.Add(timeout))
 }
 
 func (m *Mock) deadlineContext(parent context.Context, deadline time.Time) (context.Context, context.CancelFunc) {

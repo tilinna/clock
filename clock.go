@@ -66,7 +66,7 @@ func (clock) Sleep(d time.Duration) {
 }
 
 func (clock) Tick(d time.Duration) <-chan time.Time {
-	// Using time.Tick would trigger a vet tool warning
+	// Using time.Tick would trigger a vet tool warning.
 	if d <= 0 {
 		return nil
 	}
