@@ -20,7 +20,6 @@ func TestContext(t *testing.T) {
 	}
 
 	ctx = clock.Context(ctx, clock.New(mockTime))
-	c = clock.FromContext(ctx)
 	m, ok := clock.FromContext(ctx).(*clock.Mock)
 	if !ok {
 		t.Fatalf("want *clock.Mock, got %T", m)
