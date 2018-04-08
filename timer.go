@@ -47,8 +47,9 @@ func (m *Mock) Sleep(d time.Duration) {
 func (m *Mock) newTimerFunc(deadline time.Time, afterFunc func()) *Timer {
 	t := &Timer{
 		mockTimer: &mockTimer{
-			deadline: deadline,
-			mock:     m,
+			deadline:  deadline,
+			mock:      m,
+			heapIndex: removed,
 		},
 	}
 	if afterFunc != nil {
