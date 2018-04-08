@@ -78,4 +78,25 @@ func TestContext(t *testing.T) {
 	if got, want := ctx3.Err(), context.Canceled; want != got {
 		t.Fatalf("want ctx3.Err(): %q, got: %q", want, got)
 	}
+
+	// Test chained contexts
+	dctx1, _ := ctx1.Deadline()
+	ctx4, cfn4 := clock.WithDeadline(ctx1, dctx1.Add(5*time.Second))
+	defer cfn4()
+	dctx4, _ := ctx4.Deadline()
+	if !dctx4.Equal(dctx1) {
+		t.Fatalf("want earlier deadline: %q, got: %q", dctx1, dctx4)
+	}
+
+	ctx5, cfn5 := clock.WithDeadline(ctx1, dctx1.Add(-5*time.Second))
+	defer cfn5()
+	dctx5, _ := ctx5.Deadline()
+	if dctx5.Equal(dctx1) {
+		t.Fatalf("want earlier deadline: %q, got: %q", dctx5, dctx1)
+	}
+	<-ctx4.Done()
+	<-ctx5.Done()
+	if got, want := ctx5.Err(), context.DeadlineExceeded; want != got {
+		t.Fatalf("want ctx5.Err(): %q, got: %q", want, got)
+	}
 }

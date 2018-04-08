@@ -98,7 +98,7 @@ func Until(ctx context.Context, t time.Time) time.Duration {
 
 func (m *Mock) deadlineContext(parent context.Context, deadline time.Time) (context.Context, context.CancelFunc) {
 	cancelCtx, cancel := context.WithCancel(parent)
-	if pd, ok := parent.Deadline(); ok && !deadline.After(pd) {
+	if pd, ok := parent.Deadline(); ok && !pd.After(deadline) {
 		return cancelCtx, cancel
 	}
 	ctx := &mockCtx{
