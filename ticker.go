@@ -37,11 +37,8 @@ func (m *Mock) Tick(d time.Duration) <-chan time.Time {
 func (m *Mock) newTicker(d time.Duration) *Ticker {
 	c := make(chan time.Time, 1)
 	t := &Ticker{
-		C: c,
-		mockTimer: &mockTimer{
-			deadline: m.now.Add(d),
-			mock:     m,
-		},
+		C:         c,
+		mockTimer: newMockTimer(m, m.now.Add(d)),
 	}
 	t.fire = func() time.Duration {
 		select {

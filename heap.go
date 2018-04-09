@@ -14,6 +14,14 @@ type mockTimer struct {
 
 const removed = -1
 
+func newMockTimer(m *Mock, d time.Time) *mockTimer {
+	return &mockTimer{
+		deadline:  d,
+		mock:      m,
+		heapIndex: removed,
+	}
+}
+
 func (t mockTimer) stopped() bool {
 	return t.heapIndex == removed
 }
