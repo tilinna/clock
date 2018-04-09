@@ -9,8 +9,8 @@ type clockKey struct{}
 
 // Context returns a copy of parent in which the Clock c is associated with.
 //
-// If the clock is an instance of *Mock, all subsequent uses of the
-// context in this package are automatically mocked, else the standard
+// If the clock is a *Mock, all subsequent uses of the context
+// in this package are automatically mocked, else the standard
 // realtime clock is used.
 func Context(parent context.Context, c Clock) context.Context {
 	return context.WithValue(parent, clockKey{}, c)
@@ -24,12 +24,12 @@ func FromContext(ctx context.Context) Clock {
 	return Realtime()
 }
 
-// WithDeadline returns a copy of the parent context with the deadline adjusted
+// DeadlineContext returns a copy of the parent context with the deadline adjusted
 // to be no later than d.
 //
 // If the FromContext(parent) returns a *Mock, it is used to mock the deadline,
-// else context.WithDeadline is called directly.
-func WithDeadline(parent context.Context, d time.Time) (context.Context, context.CancelFunc) {
+// else the standard context.WithDeadline is called directly.
+func DeadlineContext(parent context.Context, d time.Time) (context.Context, context.CancelFunc) {
 	if m, ok := FromContext(parent).(*Mock); ok {
 		m.Lock()
 		defer m.Unlock()
@@ -38,11 +38,11 @@ func WithDeadline(parent context.Context, d time.Time) (context.Context, context
 	return context.WithDeadline(parent, d)
 }
 
-// WithTimeout returns WithDeadline(parent, Clock(parent).Now().Add(timeout)).
+// TimeoutContext returns DeadlineContext(parent, Now(parent).Add(timeout)).
 //
 // If the FromContext(parent) returns a *Mock, it is used to mock the deadline,
-// else context.WithTimeout is called directly.
-func WithTimeout(parent context.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
+// else the standard context.WithTimeout is called directly.
+func TimeoutContext(parent context.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
 	if m, ok := FromContext(parent).(*Mock); ok {
 		m.Lock()
 		defer m.Unlock()
