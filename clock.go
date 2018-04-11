@@ -1,5 +1,22 @@
 // Package clock implements a library for mocking time.
 //
+// Usage
+//
+// Include a Clock variable on your application and initialize it with
+// a Realtime() by default. Then use the Clock for all time-related API
+// calls. So instead of time.NewTimer(), say myClock.NewTimer().
+//
+// On a test setup, override or inject the variable with a Mock instance
+// and use it to control how the time behaves during each test phase.
+//
+// To mock context.WithTimeout and context.WithDeadline, use the included
+// Context, TimeoutContext and DeadlineContext methods.
+//
+// The Context method is also useful in cases where you need to pass a
+// Clock via an 'func(ctx Context, ..)' API you can't change yourself.
+// The FromContext method will then return the associated Clock instance.
+// Alternatively, use the context'ed methods like Sleep(ctx) directly.
+//
 // All methods are safe for concurrent use.
 package clock
 

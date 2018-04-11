@@ -12,7 +12,7 @@ type mockTimers interface {
 	next() *mockTimer
 }
 
-// Mock represents a Clock that only moves with Add() or Set().
+// Mock implements a Clock that only moves with Add, AddNext and SetNow.
 //
 // The clock can be suspended with Lock and resumed with Unlock.
 // While suspended, all attempts to use the API will block.
@@ -25,44 +25,62 @@ type Mock struct {
 	mockTimers
 }
 
-// New returns a new mocked Clock with current time set to now.
+// NewMock returns a new Mock with current time set to now.
 //
-// Use Realtime to get the standard real-time Clock.
-func New(now time.Time) *Mock {
+// Use Realtime to get the real-time Clock.
+func NewMock(now time.Time) *Mock {
 	return &Mock{
 		now:        now,
 		mockTimers: &timerHeap{},
 	}
 }
 
-// Add advances the current time by d and fires all expires timers.
+// Add advances the current time by duration d and fires all expired timers.
 //
+// Returns the new current time.
 // To increase predictability and speed, Tickers are ticked only once per call.
-func (m *Mock) Add(d time.Duration) {
+func (m *Mock) Add(d time.Duration) time.Time {
 	m.Lock()
 	defer m.Unlock()
-	m.set(m.now.Add(d))
+	now, _ := m.set(m.now.Add(d))
+	return now
 }
 
-// Set sets the current time to now and fires all expired timers.
+// AddNext advances the current time to the next available timer deadline
+// and fires all expired timers.
 //
-// To increase predictability and speed, Tickers are ticked only once per call.
-func (m *Mock) Set(now time.Time) {
+// Returns the new current time and the advanced duration.
+func (m *Mock) AddNext() (time.Time, time.Duration) {
 	m.Lock()
 	defer m.Unlock()
-	m.set(now)
+	t := m.next()
+	if t == nil {
+		return m.now, 0
+	}
+	return m.set(t.deadline)
 }
 
-func (m *Mock) set(now time.Time) {
+// Set advances the current time to t and fires all expired timers.
+//
+// Returns the advanced duration.
+// To increase predictability and speed, Tickers are ticked only once per call.
+func (m *Mock) Set(t time.Time) time.Duration {
+	m.Lock()
+	defer m.Unlock()
+	_, d := m.set(t)
+	return d
+}
+
+func (m *Mock) set(now time.Time) (time.Time, time.Duration) {
+	cur := m.now
 	for {
 		t := m.next()
 		if t == nil || t.deadline.After(now) {
 			m.now = now
-			return
+			return m.now, m.now.Sub(cur)
 		}
 		m.now = t.deadline
-		d := t.fire()
-		if d == 0 {
+		if d := t.fire(); d == 0 {
 			// Timers are always stopped.
 			m.stop(t)
 		} else {

@@ -9,9 +9,7 @@ import (
 	"github.com/tilinna/clock"
 )
 
-var mockTime = time.Date(2018, 1, 1, 10, 0, 0, 0, time.UTC)
-
-func TestContext(t *testing.T) {
+func Test_Context(t *testing.T) {
 	ctx := context.Background()
 
 	c := clock.FromContext(ctx)
@@ -19,7 +17,7 @@ func TestContext(t *testing.T) {
 		t.Fatalf("want realtime clock, got %T", c)
 	}
 
-	ctx = clock.Context(ctx, clock.New(mockTime))
+	ctx = clock.Context(ctx, clock.NewMock(testTime))
 	m, ok := clock.FromContext(ctx).(*clock.Mock)
 	if !ok {
 		t.Fatalf("want *clock.Mock, got %T", m)
@@ -28,7 +26,7 @@ func TestContext(t *testing.T) {
 	tm := clock.NewTimer(ctx, 5*time.Second)
 	ctx1, cfn1 := clock.TimeoutContext(ctx, 10*time.Second)
 	defer cfn1()
-	ctx2, cfn2 := clock.DeadlineContext(ctx, mockTime.Add(15*time.Second))
+	ctx2, cfn2 := clock.DeadlineContext(ctx, testTime.Add(15*time.Second))
 	defer cfn2()
 	ctx3, cfn3 := clock.TimeoutContext(ctx, 10*time.Second)
 	cfn3()
@@ -38,8 +36,8 @@ func TestContext(t *testing.T) {
 		t.Fatalf("want ctx3.Err(): %q, got: %q", want, got)
 	}
 
-	if d, ok := ctx2.Deadline(); !ok || !d.Equal(mockTime.Add(15*time.Second)) {
-		t.Fatalf("want ctx2.Deadline(): %q, got: %q", mockTime.Add(15*time.Second), d)
+	if d, ok := ctx2.Deadline(); !ok || !d.Equal(testTime.Add(15*time.Second)) {
+		t.Fatalf("want ctx2.Deadline(): %q, got: %q", testTime.Add(15*time.Second), d)
 	}
 
 	var wg sync.WaitGroup
@@ -64,7 +62,7 @@ func TestContext(t *testing.T) {
 	m.Add(20 * time.Second) // fires all timers simultaneously
 	wg.Wait()
 
-	if !timeout.Equal(mockTime.Add(5 * time.Second)) {
+	if !timeout.Equal(testTime.Add(5 * time.Second)) {
 		t.Fatalf("want tm timer to expire after 5 seconds, got %q", timeout)
 	}
 	if got, want := ctx1.Err(), context.DeadlineExceeded; want != got {
