@@ -13,7 +13,7 @@ type mockTimers interface {
 	next() *mockTimer
 }
 
-// Mock implements a Clock that only moves with Add, AddNext and SetNow.
+// Mock implements a Clock that only moves with Add, AddNext and Set.
 //
 // The clock can be suspended with Lock and resumed with Unlock.
 // While suspended, all attempts to use the API will block.
