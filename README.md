@@ -2,7 +2,7 @@
 
 A Go (golang) library for mocking standard time, optionally also with context.Context.
 
-## Usage
+## Basic Usage
 
 ```go
 // Use clock.Realtime() in production
@@ -18,7 +18,7 @@ fmt.Println("Timeout was", <-timer.C)
 // Timeout was 2018-01-01 10:00:15 +0000 UTC
 ```
 
-## Context
+## Context Usage
 
 ```go
 start := time.Date(2018, 1, 1, 10, 0, 0, 0, time.UTC)
@@ -38,7 +38,3 @@ fmt.Println("err:", ctx.Err())
 // now: 2018-01-01 11:00:00 +0000 UTC
 // err: context deadline exceeded
 ```
-
-## TODO
-
-- Tag v1.0
