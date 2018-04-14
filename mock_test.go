@@ -49,6 +49,9 @@ func TestMock_AddNext(t *testing.T) {
 	test(tm.C, 25*time.Second)
 	next(0)
 	next(0)
+	if got, want := m.Until(testTime), -25*time.Second; got != want {
+		t.Fatalf("want: %s, got: %s", want, got)
+	}
 
 	done := make(chan struct{})
 
@@ -69,13 +72,13 @@ func TestMock_AddNext(t *testing.T) {
 
 func ExampleMock_AddNext() {
 	start := time.Now()
-	m := clock.NewMock(start)
-	m.Tick(1 * time.Second)
-	fizz := m.Tick(3 * time.Second)
-	buzz := m.Tick(5 * time.Second)
+	mock := clock.NewMock(start)
+	mock.Tick(1 * time.Second)
+	fizz := mock.Tick(3 * time.Second)
+	buzz := mock.Tick(5 * time.Second)
 	var items []string
 	for i := 0; i < 20; i++ {
-		m.AddNext()
+		mock.AddNext()
 		var item string
 		select {
 		case <-fizz:
@@ -90,7 +93,7 @@ func ExampleMock_AddNext() {
 			case <-buzz:
 				item = "Buzz"
 			default:
-				item = strconv.Itoa(int(m.Since(start) / time.Second))
+				item = strconv.Itoa(int(mock.Since(start) / time.Second))
 			}
 		}
 		items = append(items, item)
@@ -100,11 +103,12 @@ func ExampleMock_AddNext() {
 }
 
 func ExampleNewMock() {
-	m := clock.NewMock(time.Date(2018, 1, 1, 10, 0, 0, 0, time.UTC))
-	fmt.Println("Time is now", m.Now())
-	timer := m.NewTimer(15 * time.Second)
-	m.Add(25 * time.Second)
-	fmt.Println("Time is now", m.Now())
+	// Use clock.Realtime() in production
+	mock := clock.NewMock(time.Date(2018, 1, 1, 10, 0, 0, 0, time.UTC))
+	fmt.Println("Time is now", mock.Now())
+	timer := mock.NewTimer(15 * time.Second)
+	mock.Add(25 * time.Second)
+	fmt.Println("Time is now", mock.Now())
 	fmt.Println("Timeout was", <-timer.C)
 	// Output:
 	// Time is now 2018-01-01 10:00:00 +0000 UTC

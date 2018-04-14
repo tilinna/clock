@@ -2,6 +2,7 @@ package clock_test
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -17,18 +18,24 @@ func Test_Context(t *testing.T) {
 		t.Fatalf("want realtime clock, got %T", c)
 	}
 
-	ctx = clock.Context(ctx, clock.NewMock(testTime))
+	m := clock.NewMock(testTime)
+	ctx = m.Context(ctx)
 	m, ok := clock.FromContext(ctx).(*clock.Mock)
 	if !ok {
 		t.Fatalf("want *clock.Mock, got %T", m)
 	}
 
 	tm := clock.NewTimer(ctx, 5*time.Second)
-	ctx1, cfn1 := clock.TimeoutContext(ctx, 10*time.Second)
+	ctx1, cfn1 := m.TimeoutContext(ctx, 10*time.Second)
+	m2 := clock.FromContext(ctx1)
+	if m != m2 {
+		t.Fatalf("want *clock.Mock: %p, got %p", m, m2)
+	}
+
 	defer cfn1()
-	ctx2, cfn2 := clock.DeadlineContext(ctx, testTime.Add(15*time.Second))
+	ctx2, cfn2 := m.DeadlineContext(ctx, testTime.Add(15*time.Second))
 	defer cfn2()
-	ctx3, cfn3 := clock.TimeoutContext(ctx, 10*time.Second)
+	ctx3, cfn3 := m.TimeoutContext(ctx, 10*time.Second)
 	cfn3()
 	<-ctx3.Done()
 
@@ -79,14 +86,14 @@ func Test_Context(t *testing.T) {
 
 	// Test chained contexts
 	dctx1, _ := ctx1.Deadline()
-	ctx4, cfn4 := clock.DeadlineContext(ctx1, dctx1.Add(5*time.Second))
+	ctx4, cfn4 := m.DeadlineContext(ctx1, dctx1.Add(5*time.Second))
 	defer cfn4()
 	dctx4, _ := ctx4.Deadline()
 	if !dctx4.Equal(dctx1) {
 		t.Fatalf("want earlier deadline: %q, got: %q", dctx1, dctx4)
 	}
 
-	ctx5, cfn5 := clock.DeadlineContext(ctx1, dctx1.Add(-5*time.Second))
+	ctx5, cfn5 := m.DeadlineContext(ctx1, dctx1.Add(-5*time.Second))
 	defer cfn5()
 	dctx5, _ := ctx5.Deadline()
 	if dctx5.Equal(dctx1) {
@@ -97,4 +104,23 @@ func Test_Context(t *testing.T) {
 	if got, want := ctx5.Err(), context.DeadlineExceeded; want != got {
 		t.Fatalf("want ctx5.Err(): %q, got: %q", want, got)
 	}
+}
+
+func ExampleMock_DeadlineContext() {
+	start := time.Date(2018, 1, 1, 10, 0, 0, 0, time.UTC)
+	mock := clock.NewMock(start)
+	fmt.Println("now:", mock.Now())
+	ctx, cfn := mock.DeadlineContext(context.Background(), start.Add(time.Hour))
+	defer cfn()
+	fmt.Println("err:", ctx.Err())
+	dl, _ := ctx.Deadline()
+	mock.Set(dl)
+	fmt.Println("now:", clock.Now(ctx))
+	<-ctx.Done()
+	fmt.Println("err:", ctx.Err())
+	// Output:
+	// now: 2018-01-01 10:00:00 +0000 UTC
+	// err: <nil>
+	// now: 2018-01-01 11:00:00 +0000 UTC
+	// err: context deadline exceeded
 }

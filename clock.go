@@ -21,10 +21,11 @@
 package clock
 
 import (
+	"context"
 	"time"
 )
 
-// Clock represents an interface to the functions in the standard time package.
+// Clock represents an interface to the functions in the standard time and context packages.
 type Clock interface {
 	After(d time.Duration) <-chan time.Time
 	AfterFunc(d time.Duration, f func()) *Timer
@@ -35,6 +36,16 @@ type Clock interface {
 	Sleep(d time.Duration)
 	Tick(d time.Duration) <-chan time.Time
 	Until(t time.Time) time.Duration
+
+	// Context returns a copy of parent in which the Clock is associated with.
+	Context(parent context.Context) context.Context
+
+	// DeadlineContext returns a copy of the parent context with the associated
+	// Clock deadline adjusted to be no later than d.
+	DeadlineContext(parent context.Context, d time.Time) (context.Context, context.CancelFunc)
+
+	// TimeoutContext returns DeadlineContext(parent, Now(parent).Add(timeout)).
+	TimeoutContext(parent context.Context, timeout time.Duration) (context.Context, context.CancelFunc)
 }
 
 type clock struct{}
@@ -92,4 +103,16 @@ func (clock) Tick(d time.Duration) <-chan time.Time {
 
 func (clock) Until(t time.Time) time.Duration {
 	return time.Until(t)
+}
+
+func (c clock) Context(parent context.Context) context.Context {
+	return context.WithValue(parent, clockKey{}, c)
+}
+
+func (clock) DeadlineContext(parent context.Context, d time.Time) (context.Context, context.CancelFunc) {
+	return context.WithDeadline(parent, d)
+}
+
+func (clock) TimeoutContext(parent context.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(parent, timeout)
 }

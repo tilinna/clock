@@ -7,48 +7,12 @@ import (
 
 type clockKey struct{}
 
-// Context returns a copy of parent in which the Clock c is associated with.
-//
-// If the clock is a *Mock, all subsequent uses of the context
-// in this package are automatically mocked, else the standard
-// realtime clock is used.
-func Context(parent context.Context, c Clock) context.Context {
-	return context.WithValue(parent, clockKey{}, c)
-}
-
-// FromContext returns the clock associated with the context, or Realtime().
+// FromContext returns the Clock associated with the context, or Realtime().
 func FromContext(ctx context.Context) Clock {
 	if c, ok := ctx.Value(clockKey{}).(Clock); ok {
 		return c
 	}
 	return Realtime()
-}
-
-// DeadlineContext returns a copy of the parent context with the deadline adjusted
-// to be no later than d.
-//
-// If the FromContext(parent) returns a *Mock, it is used to mock the deadline,
-// else the standard context.WithDeadline is called directly.
-func DeadlineContext(parent context.Context, d time.Time) (context.Context, context.CancelFunc) {
-	if m, ok := FromContext(parent).(*Mock); ok {
-		m.Lock()
-		defer m.Unlock()
-		return m.deadlineContext(parent, d)
-	}
-	return context.WithDeadline(parent, d)
-}
-
-// TimeoutContext returns DeadlineContext(parent, Now(parent).Add(timeout)).
-//
-// If the FromContext(parent) returns a *Mock, it is used to mock the deadline,
-// else the standard context.WithTimeout is called directly.
-func TimeoutContext(parent context.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
-	if m, ok := FromContext(parent).(*Mock); ok {
-		m.Lock()
-		defer m.Unlock()
-		return m.deadlineContext(parent, m.now.Add(timeout))
-	}
-	return context.WithTimeout(parent, timeout)
 }
 
 // After is a convenience wrapper for FromContext(ctx).After.
@@ -96,8 +60,37 @@ func Until(ctx context.Context, t time.Time) time.Duration {
 	return FromContext(ctx).Until(t)
 }
 
+// DeadlineContext is a convenience wrapper for FromContext(ctx).DeadlineContext.
+func DeadlineContext(ctx context.Context, d time.Time) (context.Context, context.CancelFunc) {
+	return FromContext(ctx).DeadlineContext(ctx, d)
+}
+
+// TimeoutContext is a convenience wrapper for FromContext(ctx).TimeoutContext.
+func TimeoutContext(ctx context.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
+	return FromContext(ctx).TimeoutContext(ctx, timeout)
+}
+
+// Context implements Clock.
+func (m *Mock) Context(parent context.Context) context.Context {
+	return context.WithValue(parent, clockKey{}, m)
+}
+
+// DeadlineContext implements Clock.
+func (m *Mock) DeadlineContext(parent context.Context, d time.Time) (context.Context, context.CancelFunc) {
+	m.Lock()
+	defer m.Unlock()
+	return m.deadlineContext(parent, d)
+}
+
+// TimeoutContext implements Clock.
+func (m *Mock) TimeoutContext(parent context.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
+	m.Lock()
+	defer m.Unlock()
+	return m.deadlineContext(parent, m.now.Add(timeout))
+}
+
 func (m *Mock) deadlineContext(parent context.Context, deadline time.Time) (context.Context, context.CancelFunc) {
-	cancelCtx, cancel := context.WithCancel(parent)
+	cancelCtx, cancel := context.WithCancel(m.Context(parent))
 	if pd, ok := parent.Deadline(); ok && !pd.After(deadline) {
 		return cancelCtx, cancel
 	}
