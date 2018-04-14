@@ -7,6 +7,11 @@ import (
 
 type clockKey struct{}
 
+// Context returns a copy of parent in which the Clock is associated with.
+func Context(parent context.Context, c Clock) context.Context {
+	return context.WithValue(parent, clockKey{}, c)
+}
+
 // FromContext returns the Clock associated with the context, or Realtime().
 func FromContext(ctx context.Context) Clock {
 	if c, ok := ctx.Value(clockKey{}).(Clock); ok {
@@ -68,71 +73,4 @@ func DeadlineContext(ctx context.Context, d time.Time) (context.Context, context
 // TimeoutContext is a convenience wrapper for FromContext(ctx).TimeoutContext.
 func TimeoutContext(ctx context.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
 	return FromContext(ctx).TimeoutContext(ctx, timeout)
-}
-
-// Context implements Clock.
-func (m *Mock) Context(parent context.Context) context.Context {
-	return context.WithValue(parent, clockKey{}, m)
-}
-
-// DeadlineContext implements Clock.
-func (m *Mock) DeadlineContext(parent context.Context, d time.Time) (context.Context, context.CancelFunc) {
-	m.Lock()
-	defer m.Unlock()
-	return m.deadlineContext(parent, d)
-}
-
-// TimeoutContext implements Clock.
-func (m *Mock) TimeoutContext(parent context.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
-	m.Lock()
-	defer m.Unlock()
-	return m.deadlineContext(parent, m.now.Add(timeout))
-}
-
-func (m *Mock) deadlineContext(parent context.Context, deadline time.Time) (context.Context, context.CancelFunc) {
-	cancelCtx, cancel := context.WithCancel(m.Context(parent))
-	if pd, ok := parent.Deadline(); ok && !pd.After(deadline) {
-		return cancelCtx, cancel
-	}
-	ctx := &mockCtx{
-		Context:  cancelCtx,
-		done:     make(chan struct{}),
-		deadline: deadline,
-	}
-	t := m.newTimerFunc(deadline, nil)
-	go func() {
-		select {
-		case <-t.C:
-			ctx.err = context.DeadlineExceeded
-		case <-cancelCtx.Done():
-			ctx.err = cancelCtx.Err()
-			defer t.Stop()
-		}
-		close(ctx.done)
-	}()
-	return ctx, cancel
-}
-
-type mockCtx struct {
-	context.Context
-	deadline time.Time
-	done     chan struct{}
-	err      error
-}
-
-func (ctx *mockCtx) Deadline() (time.Time, bool) {
-	return ctx.deadline, true
-}
-
-func (ctx *mockCtx) Done() <-chan struct{} {
-	return ctx.done
-}
-
-func (ctx *mockCtx) Err() error {
-	select {
-	case <-ctx.done:
-		return ctx.err
-	default:
-		return nil
-	}
 }

@@ -37,9 +37,6 @@ type Clock interface {
 	Tick(d time.Duration) <-chan time.Time
 	Until(t time.Time) time.Duration
 
-	// Context returns a copy of parent in which the Clock is associated with.
-	Context(parent context.Context) context.Context
-
 	// DeadlineContext returns a copy of the parent context with the associated
 	// Clock deadline adjusted to be no later than d.
 	DeadlineContext(parent context.Context, d time.Time) (context.Context, context.CancelFunc)
@@ -103,10 +100,6 @@ func (clock) Tick(d time.Duration) <-chan time.Time {
 
 func (clock) Until(t time.Time) time.Duration {
 	return time.Until(t)
-}
-
-func (c clock) Context(parent context.Context) context.Context {
-	return context.WithValue(parent, clockKey{}, c)
 }
 
 func (clock) DeadlineContext(parent context.Context, d time.Time) (context.Context, context.CancelFunc) {

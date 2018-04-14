@@ -1,6 +1,7 @@
 package clock
 
 import (
+	"context"
 	"sync"
 	"time"
 )
@@ -111,4 +112,66 @@ func (m *Mock) Until(t time.Time) time.Duration {
 	m.Lock()
 	defer m.Unlock()
 	return t.Sub(m.now)
+}
+
+// DeadlineContext implements Clock.
+func (m *Mock) DeadlineContext(parent context.Context, d time.Time) (context.Context, context.CancelFunc) {
+	m.Lock()
+	defer m.Unlock()
+	return m.deadlineContext(parent, d)
+}
+
+// TimeoutContext implements Clock.
+func (m *Mock) TimeoutContext(parent context.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
+	m.Lock()
+	defer m.Unlock()
+	return m.deadlineContext(parent, m.now.Add(timeout))
+}
+
+func (m *Mock) deadlineContext(parent context.Context, deadline time.Time) (context.Context, context.CancelFunc) {
+	cancelCtx, cancel := context.WithCancel(Context(parent, m))
+	if pd, ok := parent.Deadline(); ok && !pd.After(deadline) {
+		return cancelCtx, cancel
+	}
+	ctx := &mockCtx{
+		Context:  cancelCtx,
+		done:     make(chan struct{}),
+		deadline: deadline,
+	}
+	t := m.newTimerFunc(deadline, nil)
+	go func() {
+		select {
+		case <-t.C:
+			ctx.err = context.DeadlineExceeded
+		case <-cancelCtx.Done():
+			ctx.err = cancelCtx.Err()
+			defer t.Stop()
+		}
+		close(ctx.done)
+	}()
+	return ctx, cancel
+}
+
+type mockCtx struct {
+	context.Context
+	deadline time.Time
+	done     chan struct{}
+	err      error
+}
+
+func (ctx *mockCtx) Deadline() (time.Time, bool) {
+	return ctx.deadline, true
+}
+
+func (ctx *mockCtx) Done() <-chan struct{} {
+	return ctx.done
+}
+
+func (ctx *mockCtx) Err() error {
+	select {
+	case <-ctx.done:
+		return ctx.err
+	default:
+		return nil
+	}
 }

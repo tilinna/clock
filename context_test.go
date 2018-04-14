@@ -18,8 +18,7 @@ func Test_Context(t *testing.T) {
 		t.Fatalf("want realtime clock, got %T", c)
 	}
 
-	m := clock.NewMock(testTime)
-	ctx = m.Context(ctx)
+	ctx = clock.Context(ctx, clock.NewMock(testTime))
 	m, ok := clock.FromContext(ctx).(*clock.Mock)
 	if !ok {
 		t.Fatalf("want *clock.Mock, got %T", m)
