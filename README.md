@@ -1,4 +1,4 @@
-# clock [![GoDoc](https://godoc.org/github.com/tilinna/clock?status.png)](https://godoc.org/github.com/tilinna/clock)
+# clock [![GoDoc](https://godoc.org/github.com/tilinna/clock?status.png)](https://godoc.org/github.com/tilinna/clock) [![Go Report Card](https://goreportcard.com/badge/github.com/tilinna/clock)](https://goreportcard.com/report/github.com/tilinna/clock)
 
 A Go (golang) library for mocking standard time, optionally also with context.Context.
 
