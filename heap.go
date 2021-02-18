@@ -81,3 +81,7 @@ func (h timerHeap) next() *mockTimer {
 	}
 	return h[0]
 }
+
+func (h timerHeap) len() int {
+	return h.Len()
+}

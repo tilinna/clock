@@ -11,6 +11,7 @@ type mockTimers interface {
 	stop(t *mockTimer)
 	reset(t *mockTimer)
 	next() *mockTimer
+	len() int
 }
 
 // Mock implements a Clock that only moves with Add, AddNext and Set.
@@ -91,6 +92,13 @@ func (m *Mock) set(now time.Time) (time.Time, time.Duration) {
 			m.reset(t)
 		}
 	}
+}
+
+// Len returns the number of active timers.
+func (m *Mock) Len() int {
+	m.Lock()
+	defer m.Unlock()
+	return m.len()
 }
 
 // Now returns the current mocked time.
