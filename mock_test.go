@@ -14,20 +14,31 @@ var testTime = time.Date(2018, 1, 1, 10, 0, 0, 0, time.UTC)
 
 func TestMock_AddNext(t *testing.T) {
 	m := clock.NewMock(testTime)
+
+	if got, want := m.Len(), 0; got != want {
+		t.Fatalf("want m.Len(): %d, got: %d", want, got)
+	}
+
 	test := func(C <-chan time.Time, want time.Duration) {
 		now := <-C
 		if got := now.Sub(testTime); got != want {
 			t.Errorf("want timeout at t+%s, got: t+%s", want, got)
 		}
 	}
+
 	next := func(want time.Duration) {
 		_, got := m.AddNext()
 		if want != got {
 			t.Errorf("want c.AddNext(): %s, got: %s", want, got)
 		}
 	}
+
 	tc := m.NewTicker(5 * time.Second)
 	tm := m.NewTimer(10 * time.Second)
+
+	if got, want := m.Len(), 2; got != want {
+		t.Fatalf("want m.Len(): %d, got: %d", want, got)
+	}
 
 	next(5 * time.Second)
 	test(tc.C, 5*time.Second)
@@ -37,6 +48,10 @@ func TestMock_AddNext(t *testing.T) {
 	test(tm.C, 10*time.Second)
 	tc.Stop()
 	tm.Reset(15 * time.Second)
+
+	if got, want := m.Len(), 1; got != want {
+		t.Fatalf("want m.Len(): %d, got: %d", want, got)
+	}
 
 	next(15 * time.Second)
 	test(tm.C, 25*time.Second)
@@ -68,6 +83,12 @@ func TestMock_AddNext(t *testing.T) {
 	})
 	next(30 * time.Second)
 	<-done
+
+	tm.Stop()
+
+	if got, want := m.Len(), 1; got != want {
+		t.Fatalf("want m.Len(): %d, got: %d", want, got)
+	}
 }
 
 func ExampleMock_AddNext() {
